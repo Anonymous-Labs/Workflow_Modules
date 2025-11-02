@@ -10,19 +10,10 @@ class PredictInput(BaseModel):
     Attributes:
         model: Trained scikit-learn model instance
         X: Feature DataFrame for prediction
-        prediction_intervals: Whether to calculate prediction intervals
-        confidence_level: Confidence level for prediction intervals (0-1)
+        (prediction_intervals and confidence_level removed)
     """
     model: LinearRegression
     X: pd.DataFrame
-    prediction_intervals: bool = Field(
-        default=False,
-        description="Whether to calculate prediction intervals"
-    )
-    confidence_level: float = Field(
-        default=0.95,
-        description="Confidence level for prediction intervals"
-    )
     model_config = {"arbitrary_types_allowed": True}
 
 class PredictOutput(BaseModel):
@@ -78,47 +69,6 @@ class PredictNode:
     """
     
     @staticmethod
-    def calculate_prediction_intervals(
-        model: LinearRegression,
-        X: pd.DataFrame,
-        predictions: np.ndarray,
-        confidence_level: float
-    ) -> Dict[str, pd.Series]:
-        """Calculate prediction intervals for linear regression
-        
-        Args:
-            model: Trained LinearRegression model
-            X: Feature DataFrame
-            predictions: Model predictions
-            confidence_level: Confidence level (0-1)
-            
-        Returns:
-            Dictionary containing lower and upper prediction bounds
-        """
-        from scipy import stats
-        
-        # Get MSE from training
-        mse = np.mean((model.predict(X) - predictions) ** 2)
-        
-        # Standard error of predictions
-        X_new = X.values
-        n = X_new.shape[0]
-        p = X_new.shape[1]
-        
-        # Diagonal of hat matrix
-        hat_matrix_diag = np.einsum('ij,ij->i', X_new.dot(np.linalg.inv(X_new.T.dot(X_new))), X_new)
-        
-        # Calculate prediction intervals
-        alpha = 1 - confidence_level
-        t_value = stats.t.ppf(1 - alpha/2, n-p)
-        
-        prediction_std = np.sqrt(mse * (1 + hat_matrix_diag))
-        margin_of_error = t_value * prediction_std
-        
-        return {
-            "lower": pd.Series(predictions - margin_of_error, name="Lower Bound"),
-            "upper": pd.Series(predictions + margin_of_error, name="Upper Bound")
-        }
     
     @staticmethod
     def execute(inputs: PredictInput) -> PredictOutput:
@@ -137,8 +87,6 @@ class PredictNode:
         # Input validation
         if inputs.X.isna().any().any():
             raise ValueError("Input features contain NaN values")
-        if inputs.prediction_intervals and not (0 < inputs.confidence_level < 1):
-            raise ValueError("Confidence level must be between 0 and 1")
             
         # Generate predictions
         y_pred = inputs.model.predict(inputs.X)
@@ -153,19 +101,8 @@ class PredictNode:
             "n_predictions": len(y_pred)
         }
         
-        # Calculate prediction intervals if requested
+        # prediction intervals removed; keep None
         prediction_intervals = None
-        if inputs.prediction_intervals:
-            try:
-                prediction_intervals = PredictNode.calculate_prediction_intervals(
-                    inputs.model,
-                    inputs.X,
-                    y_pred,
-                    inputs.confidence_level
-                )
-                prediction_stats["confidence_level"] = inputs.confidence_level
-            except Exception as e:
-                print(f"Warning: Could not calculate prediction intervals: {str(e)}")
         
         return PredictOutput(
             predictions=y_pred_series,
