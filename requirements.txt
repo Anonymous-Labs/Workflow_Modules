@@ -2,3 +2,6 @@ numpy
 pandas
 pydantic
 scikit-learn
+xgboost
+catboost
+lightgbm
