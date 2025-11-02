@@ -12,9 +12,6 @@ class DatasetNodeInput(BaseModel):
         separator: Column separator in CSV file (default: ',')
     """
     file_path: FilePath
-    index_col: Optional[str] = None
-    encoding: str = Field(default='utf-8', description="File encoding")
-    separator: str = Field(default=',', description="Column separator in CSV file")
     model_config = {"arbitrary_types_allowed": True}
 
 class DatasetNodeOutput(BaseModel):
@@ -75,13 +72,8 @@ class DatasetNode:
             pd.errors.ParserError: If the file format is invalid
         """
         try:
-            # Load the dataset
-            df = pd.read_csv(
-                inputs.file_path,
-                index_col=inputs.index_col,
-                encoding=inputs.encoding,
-                sep=inputs.separator
-            )
+            # Load the dataset (use pandas defaults for encoding/separator/index)
+            df = pd.read_csv(inputs.file_path)
             
             # Collect dataset information
             info = {

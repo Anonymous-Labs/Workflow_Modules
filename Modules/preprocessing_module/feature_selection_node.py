@@ -10,16 +10,13 @@ class FeatureSelectionInput(BaseModel):
         dataframe: Input DataFrame containing all features and target
         target_column: Name of the target variable column
         feature_columns: List of feature column names to select
-        validate_features: Whether to validate features for missing values and constant columns
+        (validate_features removed) Feature statistics are always computed
     """
     dataframe: pd.DataFrame
     target_column: str
     feature_columns: List[str]
-    validate_features: bool = Field(
-        default=True,
-        description="Validate features for missing values and constant columns"
-    )
     model_config = {"arbitrary_types_allowed": True}
+    
 
 class FeatureSelectionOutput(BaseModel):
     """Output containing selected features and target
@@ -54,14 +51,6 @@ class FeatureSelectionNode:
             dataframe=df,
             target_column="price",
             feature_columns=["size", "bedrooms", "location"]
-        )
-        
-        # Feature selection with validation
-        input_data = FeatureSelectionInput(
-            dataframe=df,
-            target_column="price",
-            feature_columns=["size", "bedrooms", "location"],
-            validate_features=True
         )
         
         result = FeatureSelectionNode.execute(input_data)
@@ -128,15 +117,7 @@ class FeatureSelectionNode:
         X = inputs.dataframe[inputs.feature_columns]
         y = inputs.dataframe[inputs.target_column]
         
-        # Compute feature statistics if validation is requested
-        feature_stats = {}
-        if inputs.validate_features:
-            feature_stats = FeatureSelectionNode.validate_features(X)
-            
-            # Warn about potential issues
-            if feature_stats["constant_features"]:
-                print(f"Warning: Found constant features: {feature_stats['constant_features']}")
-            if feature_stats["high_correlation_pairs"]:
-                print(f"Warning: Found highly correlated feature pairs: {feature_stats['high_correlation_pairs']}")
-        
+        # Compute feature statistics (validation always performed)
+        feature_stats = FeatureSelectionNode.validate_features(X)
+
         return FeatureSelectionOutput(X=X, y=y, feature_stats=feature_stats)

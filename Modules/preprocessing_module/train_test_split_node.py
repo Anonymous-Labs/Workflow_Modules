@@ -11,9 +11,7 @@ class TrainTestSplitInput(BaseModel):
         X: Feature DataFrame to split
         y: Target Series to split
         test_size: Proportion of dataset to include in test split (default: 0.2)
-        random_state: Random seed for reproducibility (default: 42)
-        stratify: Whether to maintain ratio of samples for each class in target
-        shuffle: Whether to shuffle data before splitting (default: True)
+        (random_state, stratify, shuffle removed)
     """
     X: pd.DataFrame
     y: pd.Series
@@ -22,18 +20,6 @@ class TrainTestSplitInput(BaseModel):
         description="Proportion of dataset to include in test split",
         ge=0.0,
         le=1.0
-    )
-    random_state: Optional[int] = Field(
-        default=42,
-        description="Random seed for reproducibility"
-    )
-    stratify: Optional[pd.Series] = Field(
-        default=None,
-        description="Data to be used for stratified split"
-    )
-    shuffle: bool = Field(
-        default=True,
-        description="Whether to shuffle data before splitting"
     )
     model_config = {"arbitrary_types_allowed": True}
 
@@ -78,13 +64,11 @@ class TrainTestSplitNode:
             test_size=0.2
         )
         
-        # Stratified split for classification
+        # Example split for classification
         input_data = TrainTestSplitInput(
             X=features_df,
             y=target_series,
-            test_size=0.2,
-            stratify=target_series,  # For maintaining class ratios
-            random_state=42
+            test_size=0.2
         )
         
         result = TrainTestSplitNode.execute(input_data)
@@ -167,10 +151,7 @@ class TrainTestSplitNode:
         X_train, X_test, y_train, y_test = train_test_split(
             inputs.X,
             inputs.y,
-            test_size=inputs.test_size,
-            random_state=inputs.random_state,
-            stratify=inputs.stratify,
-            shuffle=inputs.shuffle
+            test_size=inputs.test_size
         )
         
         # Calculate split statistics
@@ -180,10 +161,7 @@ class TrainTestSplitNode:
         
         # Add split parameters to info
         split_info["parameters"] = {
-            "test_size": inputs.test_size,
-            "random_state": inputs.random_state,
-            "shuffle": inputs.shuffle,
-            "stratified": inputs.stratify is not None
+            "test_size": inputs.test_size
         }
         
         return TrainTestSplitOutput(
